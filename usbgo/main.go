@@ -45,13 +45,13 @@ func main() {
 		log.Fatalf("Could not get IN endpoint: %v", err)
 	}
 
-	outEndpoint, err := intf.OutEndpoint(2) // endpoint address 0x02
+	outEndpoint, err := intf.OutEndpoint(1) // endpoint address 0x02
 	if err != nil {
 		log.Fatalf("Could not get OUT endpoint: %v", err)
 	}
 
 	// Write data to device
-	data := []byte("Hello USB device!")
+	data := []byte{0x01, 0x02}
 	numBytes, err := outEndpoint.Write(data)
 	if err != nil {
 		log.Fatalf("Write error: %v", err)
@@ -64,5 +64,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("Read error: %v", err)
 	}
-	fmt.Printf("Read %d bytes: %s\n", numBytes, buffer[:numBytes])
+	fmt.Printf("Read %d bytes: %+v\n", numBytes, buffer[:numBytes])
 }
