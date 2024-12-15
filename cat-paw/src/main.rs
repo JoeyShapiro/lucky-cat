@@ -12,8 +12,9 @@
 #![no_std]
 #![no_main]
 
+use embedded_hal::{digital::OutputPin, pwm::SetDutyCycle};
 // The macro for our start-up function
-use rp_pico::entry;
+use rp_pico::{entry, hal::Clock};
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
@@ -34,8 +35,14 @@ use usb_device::{class_prelude::*, prelude::*};
 use usbd_serial::SerialPort;
 
 // Used to demonstrate writing formatted strings
-use core::fmt::Write;
+use core::{fmt::Write, pin};
 use heapless::String;
+
+// The minimum PWM value (i.e. LED brightness) we want
+const LOW: u16 = 0;
+
+// The maximum PWM value (i.e. LED brightness) we want
+const HIGH: u16 = 25000;
 
 /// Custom USB class for our device
 pub struct VendorUSB<'a, B: UsbBus> {
@@ -104,6 +111,8 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
+    let core = pac::CorePeripherals::take().unwrap();
+
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
 
     // Set up the USB driver
@@ -130,6 +139,48 @@ fn main() -> ! {
         .unwrap()
         .device_class(0xff) // 2 // from: https://www.usb.org/defined-class-codes
         .build();
+
+    // The single-cycle I/O block controls our GPIO pins
+    let sio = hal::Sio::new(pac.SIO);
+
+    // Set the pins up according to their function on this particular board
+    let pins = rp_pico::Pins::new(
+        pac.IO_BANK0,
+        pac.PADS_BANK0,
+        sio.gpio_bank0,
+        &mut pac.RESETS,
+    );
+
+    // The delay object lets us wait for specified amounts of time (in
+    // milliseconds)
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+
+    // Init PWMs
+    let mut pwm_slices = hal::pwm::Slices::new(pac.PWM, &mut pac.RESETS);
+
+    // Configure PWM0
+    // could make my own pwm, but this is fine
+    // div doesnt seem to do anything
+    let pwm = &mut pwm_slices.pwm0;
+    pwm.enable();
+
+    let pwm_led = &mut pwm_slices.pwm4;
+    pwm.set_div_int(20u8); // 50 hz
+    pwm_led.enable();
+
+    // Output channel B on PWM4 to the LED pin
+    let channel = &mut pwm.channel_a;
+    let channel_led = &mut pwm_led.channel_b;
+    // channel.output_to(pins.led);
+    channel.output_to(pins.gpio0);
+    channel_led.output_to(pins.led);
+
+    let mut pin_in1 = pins.gpio1.into_push_pull_output();
+    let mut pin_in2 = pins.gpio2.into_push_pull_output();
+    // pint_en1.set_high().unwrap();
+    pin_in1.set_high().unwrap();
+    channel.set_duty_cycle(65535).unwrap();
+    channel_led.set_duty_cycle(HIGH).unwrap();
 
     loop {
         // Check for new data
