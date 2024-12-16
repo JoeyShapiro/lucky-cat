@@ -162,25 +162,22 @@ fn main() -> ! {
     // could make my own pwm, but this is fine
     // div doesnt seem to do anything
     let pwm = &mut pwm_slices.pwm0;
+    // pwm.set_ph_correct();
+    // pwm.set_div_int(20u8); // 50 hz
     pwm.enable();
-
-    let pwm_led = &mut pwm_slices.pwm4;
-    pwm.set_div_int(20u8); // 50 hz
-    pwm_led.enable();
 
     // Output channel B on PWM4 to the LED pin
     let channel = &mut pwm.channel_a;
-    let channel_led = &mut pwm_led.channel_b;
     // channel.output_to(pins.led);
     channel.output_to(pins.gpio0);
-    channel_led.output_to(pins.led);
 
     let mut pin_in1 = pins.gpio1.into_push_pull_output();
     let mut pin_in2 = pins.gpio2.into_push_pull_output();
     // pint_en1.set_high().unwrap();
-    pin_in1.set_high().unwrap();
-    channel.set_duty_cycle(65535).unwrap();
-    channel_led.set_duty_cycle(HIGH).unwrap();
+    // pin_in1.set_high().unwrap();
+    // channel.set_duty_cycle(65535).unwrap();
+
+    let mut pin_led = pins.led.into_push_pull_output();
 
     loop {
         // Check for new data
@@ -199,8 +196,12 @@ fn main() -> ! {
                     }
 
                     // first byte is amp, then velocity
-                    amplitude = buf[0] as u32;
-                    velocity = buf[1] as u32;
+                    amplitude = buf[0] as u8;
+                    velocity = buf[1] as u8;
+
+                    pin_led.set_high().unwrap();
+                    delay.delay_ms(1);
+                    pin_led.set_low().unwrap();
 
                     // send back 0x01 if we got the right data
                     let _ = serial.write(&[0x01]);
@@ -209,5 +210,3 @@ fn main() -> ! {
         }
     }
 }
-
-// End of file
