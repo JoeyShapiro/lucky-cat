@@ -129,6 +129,8 @@ fn main() -> ! {
 
     let mut amplitude = 0;
     let mut velocity = 0;
+    let mut position = 0;
+    let mut direction = 0;
 
     // Create a USB device with a fake VID and PID
     let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x05ac, 0x1261))
@@ -162,51 +164,88 @@ fn main() -> ! {
     // could make my own pwm, but this is fine
     // div doesnt seem to do anything
     let pwm = &mut pwm_slices.pwm0;
-    // pwm.set_ph_correct();
-    // pwm.set_div_int(20u8); // 50 hz
+    pwm.set_ph_correct();
+    pwm.set_div_int(20u8); // 50 hz
     pwm.enable();
 
     // Output channel B on PWM4 to the LED pin
     let channel = &mut pwm.channel_a;
     // channel.output_to(pins.led);
     channel.output_to(pins.gpio0);
+    let max = channel.max_duty_cycle();
+    // find better way
+    // finally got it. servo doesnt use whole duty cycle, just a portion
+    // so max is 20ms, but we only use 1-2ms
+    // so it was jumping around because it was trying to use the whole duty cycle
+    let real_max = max / 10; // 2ms
+    let real_min = max / 20; // 1ms
 
+    let mut pin_led = pins.led.into_push_pull_output();
     let mut pin_in1 = pins.gpio1.into_push_pull_output();
     let mut pin_in2 = pins.gpio2.into_push_pull_output();
     // pint_en1.set_high().unwrap();
     // pin_in1.set_high().unwrap();
-    // channel.set_duty_cycle(65535).unwrap();
-
-    let mut pin_led = pins.led.into_push_pull_output();
-
+    let mut i = 0;
     loop {
-        // Check for new data
-        if usb_dev.poll(&mut [&mut serial]) {
-            let mut buf = [0u8; 64];
-            match serial.read(&mut buf) {
-                Err(_e) => {
-                    // Do nothing
-                }
-                Ok(0) => {
-                    // Do nothing
-                }
-                Ok(count) => {
-                    if count != 2 {
-                        continue; // ignore anything that isn't 2 bytes
-                    }
+        i += 1;
+        // convert i to a duty cycle
+        let duty = real_min + (real_max - real_min) * i / 10;
 
-                    // first byte is amp, then velocity
-                    amplitude = buf[0] as u8;
-                    velocity = buf[1] as u8;
-
-                    pin_led.set_high().unwrap();
-                    delay.delay_ms(1);
-                    pin_led.set_low().unwrap();
-
-                    // send back 0x01 if we got the right data
-                    let _ = serial.write(&[0x01]);
-                }
+        pin_led.set_high().unwrap();
+        delay.delay_ms(100);
+        channel.set_duty_cycle(duty).unwrap();
+        pin_led.set_low().unwrap();
+        delay.delay_ms(1000);
+        if i >= 10 {
+            i = 0;
+            // blink twice
+            for _ in 0..2 {
+                pin_led.set_high().unwrap();
+                delay.delay_ms(100);
+                pin_led.set_low().unwrap();
+                delay.delay_ms(100);
             }
         }
     }
+
+    // loop {
+    //     // Check for new data
+    //     if usb_dev.poll(&mut [&mut serial]) {
+    //         let mut buf = [0u8; 64];
+    //         match serial.read(&mut buf) {
+    //             Err(_e) => {
+    //                 // Do nothing
+    //             }
+    //             Ok(0) => {
+    //                 // Do nothing
+    //             }
+    //             Ok(count) => {
+    //                 if count != 2 {
+    //                     continue; // ignore anything that isn't 2 bytes
+    //                 }
+
+    //                 // first byte is amp, then velocity
+    //                 amplitude = buf[0] as u8;
+    //                 velocity = buf[1] as u8;
+
+    //                 pin_led.set_high().unwrap();
+    //                 delay.delay_ms(1);
+    //                 pin_led.set_low().unwrap();
+
+    //                 // send back 0x01 if we got the right data
+    //                 let _ = serial.write(&[0x01]);
+    //             }
+    //         }
+    //     }
+
+    //     if position >= amplitude {
+    //         direction = -1;
+    //         pin_in2.set_low().unwrap();
+    //         pin_in1.set_high().unwrap();
+    //     } else if position <= -amplitude {
+    //         direction = 1;
+    //         pin_in1.set_low().unwrap();
+    //         pin_in2.set_high().unwrap();
+    //     }
+    // }
 }
