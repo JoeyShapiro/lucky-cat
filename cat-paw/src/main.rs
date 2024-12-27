@@ -177,16 +177,14 @@ fn main() -> ! {
     // finally got it. servo doesnt use whole duty cycle, just a portion
     // so max is 20ms, but we only use 1-2ms
     // so it was jumping around because it was trying to use the whole duty cycle
-    let real_max = max / 8; // 0.5ms // 10; // 2ms
-    let real_min = max / 40; // 2.5ms // 20; // 1ms
-                             // is 2ms, but not actually has to be
+    // its actually 0.5-2.5ms
+    // TODO make this more readable, maybe decimals or something
+    let real_max = max / 8; // 2.5ms
+    let real_min = max / 40; // 0.5ms
+
     let mut pin_led = pins.led.into_push_pull_output();
-    let mut pin_in1 = pins.gpio1.into_push_pull_output();
-    let mut pin_in2 = pins.gpio2.into_push_pull_output();
-    // pint_en1.set_high().unwrap();
-    // pin_in1.set_high().unwrap();
-    let mut i = 0;
-    loop {
+
+    for i in 0..10 {
         // convert i to a duty cycle
         let duty = real_min + (real_max - real_min) * i / 10;
 
@@ -195,18 +193,23 @@ fn main() -> ! {
         channel.set_duty_cycle(duty).unwrap();
         pin_led.set_low().unwrap();
         delay.delay_ms(500);
-        if i >= 10 {
-            i = 0;
-            // blink twice
-            for _ in 0..2 {
-                pin_led.set_high().unwrap();
-                delay.delay_ms(100);
-                pin_led.set_low().unwrap();
-                delay.delay_ms(100);
-            }
-        }
+    }
 
-        i += 1;
+    // blink twice
+    for _ in 0..2 {
+        pin_led.set_high().unwrap();
+        delay.delay_ms(100);
+        pin_led.set_low().unwrap();
+        delay.delay_ms(100);
+    }
+
+    loop {
+        delay.delay_ms(500);
+        channel.set_duty_cycle(real_min).unwrap();
+        delay.delay_ms(500);
+        channel
+            .set_duty_cycle(real_min + (real_max - real_min) * 9 / 10)
+            .unwrap();
     }
 
     // loop {
