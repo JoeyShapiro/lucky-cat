@@ -209,12 +209,12 @@ fn main() -> ! {
     channel.set_duty_cycle(real_min).unwrap();
     delay.delay_ms(500);
 
-    for i in 0..10 {
+    for i in 0..180 {
         // convert i to a duty cycle
-        let duty = real_min + (real_max - real_min) * i / 20;
+        let duty = (real_max - real_min) as f32 * i as f32 / 180.0 + real_min as f32;
 
-        channel.set_duty_cycle(duty).unwrap();
-        delay.delay_ms(50);
+        channel.set_duty_cycle(duty as u16).unwrap();
+        delay.delay_ms(10);
     }
 
     loop {
