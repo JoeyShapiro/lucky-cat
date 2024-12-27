@@ -179,10 +179,13 @@ fn main() -> ! {
     // so it was jumping around because it was trying to use the whole duty cycle
     // its actually 0.5-2.5ms
     // TODO make this more readable, maybe decimals or something
-    let real_max = max / 8; // 2.5ms
-    let real_min = max / 40; // 0.5ms
+    let real_max = (max as f32 / 8.3) as u16; // ~2.4ms
+    let real_min = (max as f32 / 45f32) as u16; // ~0.444ms
 
     let mut pin_led = pins.led.into_push_pull_output();
+
+    channel.set_duty_cycle(real_min).unwrap();
+    delay.delay_ms(500);
 
     for i in 0..10 {
         // convert i to a duty cycle
@@ -203,13 +206,22 @@ fn main() -> ! {
         delay.delay_ms(100);
     }
 
+    channel.set_duty_cycle(real_min).unwrap();
+    delay.delay_ms(500);
+
+    for i in 0..10 {
+        // convert i to a duty cycle
+        let duty = real_min + (real_max - real_min) * i / 20;
+
+        channel.set_duty_cycle(duty).unwrap();
+        delay.delay_ms(50);
+    }
+
     loop {
         delay.delay_ms(500);
         channel.set_duty_cycle(real_min).unwrap();
         delay.delay_ms(500);
-        channel
-            .set_duty_cycle(real_min + (real_max - real_min) * 9 / 10)
-            .unwrap();
+        channel.set_duty_cycle(real_max).unwrap();
     }
 
     // loop {
