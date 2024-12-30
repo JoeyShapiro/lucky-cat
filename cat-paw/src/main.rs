@@ -81,6 +81,27 @@ impl<B: UsbBus> UsbClass<B> for VendorUSB<'_, B> {
     }
 }
 
+fn move_servo(
+    channel: &mut hal::pwm::Channel<
+        hal::pwm::Slice<hal::pwm::Pwm0, hal::pwm::FreeRunning>,
+        hal::pwm::A,
+    >,
+    delay: &mut cortex_m::delay::Delay,
+    position: f32,
+    speed: f32,
+) {
+    let real_max = (channel.max_duty_cycle() as f32 / 8.3) as u16; // ~2.4ms
+    let real_min = (channel.max_duty_cycle() as f32 / 45.0) as u16; // ~0.444ms
+
+    for i in 0..(180.0 * position) as u16 {
+        // convert i to a duty cycle
+        let duty = (real_max - real_min) as f32 * i as f32 / 180.0 + real_min as f32;
+
+        channel.set_duty_cycle(duty as u16).unwrap();
+        delay.delay_ms((10.0 / speed) as u32);
+    }
+}
+
 /// Entry point to our bare-metal application.
 ///
 /// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
@@ -209,13 +230,11 @@ fn main() -> ! {
     channel.set_duty_cycle(real_min).unwrap();
     delay.delay_ms(500);
 
-    for i in 0..180 {
-        // convert i to a duty cycle
-        let duty = (real_max - real_min) as f32 * i as f32 / 180.0 + real_min as f32;
-
-        channel.set_duty_cycle(duty as u16).unwrap();
-        delay.delay_ms(10);
-    }
+    move_servo(channel, &mut delay, 1.0, 1.0);
+    delay.delay_ms(500);
+    move_servo(channel, &mut delay, 0.5, 1.0);
+    delay.delay_ms(500);
+    move_servo(channel, &mut delay, 0.0, 0.5);
 
     loop {
         delay.delay_ms(500);
