@@ -112,7 +112,7 @@ fn move_servo(
         let duty = (real_max - real_min) as f32 * i as f32 / 180.0 + real_min as f32;
 
         channel.set_duty_cycle(duty as u16).unwrap();
-        delay.delay_ms((10.0 / speed) as u32);
+        delay.delay_ms((5.0 / speed) as u32);
 
         i += step;
     }
@@ -235,8 +235,8 @@ fn main() -> ! {
 
     loop {
         // todo switching to u16 will make less conversions, and bouncing easier
-        move_servo(channel, &mut delay, 0.0, 1.0, 0.5);
-        move_servo(channel, &mut delay, 1.0, 0.0, 0.5);
+        move_servo(channel, &mut delay, 0.0, 1.0, 1.0);
+        move_servo(channel, &mut delay, 1.0, 0.0, 1.0);
     }
 
     // loop {
