@@ -87,18 +87,34 @@ fn move_servo(
         hal::pwm::A,
     >,
     delay: &mut cortex_m::delay::Delay,
-    position: f32,
+    start: f32,
+    end: f32,
     speed: f32,
 ) {
     let real_max = (channel.max_duty_cycle() as f32 / 8.3) as u16; // ~2.4ms
     let real_min = (channel.max_duty_cycle() as f32 / 45.0) as u16; // ~0.444ms
 
-    for i in 0..(180.0 * position) as u16 {
+    let range_start = (180.0 * start) as i16;
+    let range_end = (180.0 * end) as i16;
+    let step = if end > start { 1 } else { -1 };
+
+    // cant use for with rev
+    let mut i = range_start;
+    loop {
+        // break if we are at the end
+        if step == 1 && i >= range_end {
+            break;
+        } else if step == -1 && i <= range_end {
+            break;
+        }
+
         // convert i to a duty cycle
         let duty = (real_max - real_min) as f32 * i as f32 / 180.0 + real_min as f32;
 
         channel.set_duty_cycle(duty as u16).unwrap();
         delay.delay_ms((10.0 / speed) as u32);
+
+        i += step;
     }
 }
 
@@ -205,20 +221,6 @@ fn main() -> ! {
 
     let mut pin_led = pins.led.into_push_pull_output();
 
-    channel.set_duty_cycle(real_min).unwrap();
-    delay.delay_ms(500);
-
-    for i in 0..10 {
-        // convert i to a duty cycle
-        let duty = real_min + (real_max - real_min) * i / 10;
-
-        pin_led.set_high().unwrap();
-        delay.delay_ms(100);
-        channel.set_duty_cycle(duty).unwrap();
-        pin_led.set_low().unwrap();
-        delay.delay_ms(500);
-    }
-
     // blink twice
     for _ in 0..2 {
         pin_led.set_high().unwrap();
@@ -227,20 +229,14 @@ fn main() -> ! {
         delay.delay_ms(100);
     }
 
+    // reset
     channel.set_duty_cycle(real_min).unwrap();
-    delay.delay_ms(500);
-
-    move_servo(channel, &mut delay, 1.0, 1.0);
-    delay.delay_ms(500);
-    move_servo(channel, &mut delay, 0.5, 1.0);
-    delay.delay_ms(500);
-    move_servo(channel, &mut delay, 0.0, 0.5);
+    delay.delay_ms(1000);
 
     loop {
-        delay.delay_ms(500);
-        channel.set_duty_cycle(real_min).unwrap();
-        delay.delay_ms(500);
-        channel.set_duty_cycle(real_max).unwrap();
+        // todo switching to u16 will make less conversions, and bouncing easier
+        move_servo(channel, &mut delay, 0.0, 1.0, 0.5);
+        move_servo(channel, &mut delay, 1.0, 0.0, 0.5);
     }
 
     // loop {
