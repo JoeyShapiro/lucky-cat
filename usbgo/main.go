@@ -70,18 +70,17 @@ func main() {
 
 func sendWithAck(outEndpoint *gousb.OutEndpoint, inEndpoint *gousb.InEndpoint, data []byte) ([]byte, error) {
 	// Write data to device
-	numBytes, err := outEndpoint.Write(data)
+	_, err := outEndpoint.Write(data)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Wrote %d bytes\n", numBytes)
 
 	// Read data from device
 	buffer := make([]byte, 1) // adjust buffer size based on your needs
-	numBytes, err = inEndpoint.Read(buffer)
+	n, err := inEndpoint.Read(buffer)
 	if err != nil {
 		return nil, err
 	}
 
-	return buffer[:numBytes], nil
+	return buffer[:n], nil
 }

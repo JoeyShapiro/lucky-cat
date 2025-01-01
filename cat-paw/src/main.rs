@@ -193,6 +193,7 @@ fn main() -> ! {
     }
 
     loop {
+        // TODO if this is slower, it will delay the usb read AND write
         move_servo(
             channel,
             &mut delay,
