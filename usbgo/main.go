@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
+	"time"
 
 	"github.com/google/gousb"
 )
@@ -50,12 +52,20 @@ func main() {
 		log.Fatalf("Could not get OUT endpoint: %v", err)
 	}
 
-	buf, err := sendWithAck(outEndpoint, inEndpoint, []byte{0x01, 0x02})
-	if err != nil {
-		log.Fatalf("Could not send data: %v", err)
-	}
+	for {
+		amp := byte(rand.Intn(255))
+		vel := byte(rand.Intn(255))
+		fmt.Printf("Sending amplitude: %d, velocity: %d\n", amp, vel)
 
-	fmt.Printf("Read %d bytes: %+v\n", len(buf), buf)
+		buf, err := sendWithAck(outEndpoint, inEndpoint, []byte{amp, vel})
+		if err != nil {
+			log.Fatalf("Could not send data: %v", err)
+		}
+
+		fmt.Printf("Read %d bytes: %+v\n", len(buf), buf)
+
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func sendWithAck(outEndpoint *gousb.OutEndpoint, inEndpoint *gousb.InEndpoint, data []byte) ([]byte, error) {
