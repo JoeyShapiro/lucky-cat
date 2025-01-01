@@ -25,7 +25,6 @@ use usb_device::{class_prelude::*, prelude::*};
 
 const VID_APPLE: u16 = 0x05ac;
 const PID_IPOD_CLASSIC: u16 = 0x1261;
-const U8_HALF: u8 = 0x7f;
 
 #[entry]
 fn main() -> ! {
@@ -121,20 +120,7 @@ fn main() -> ! {
     }
 
     loop {
-        // TODO if this is slower, it will delay the usb read AND write
-        // TODO check cpu usage, make sure it is fine and doesnt do dumb polling stuff
-        paw.move_servo(
-            &mut delay,
-            U8_HALF - amplitude,
-            U8_HALF + amplitude,
-            velocity,
-        );
-        paw.move_servo(
-            &mut delay,
-            U8_HALF + amplitude,
-            U8_HALF - amplitude,
-            velocity,
-        );
+        paw.update(&mut delay);
 
         // Check for new data
         if usb_dev.poll(&mut [&mut serial]) {
@@ -156,12 +142,14 @@ fn main() -> ! {
 
                     // safety check to remove the last one
                     amplitude &= 0x7F;
+                    paw.set_amp(amplitude);
 
                     velocity = buf[1] as u8;
+                    paw.set_speed(velocity);
 
-                    pin_led.set_high().unwrap();
-                    delay.delay_ms(1);
-                    pin_led.set_low().unwrap();
+                    // pin_led.set_high().unwrap();
+                    // delay.delay_ms(1);
+                    // pin_led.set_low().unwrap();
 
                     // send back 0x01 if we got the right data
                     let _ = serial.write(&[0x01]);
