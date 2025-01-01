@@ -83,23 +83,24 @@ fn move_servo(
     delay: &mut cortex_m::delay::Delay,
     start: u8,
     end: u8,
-    speed: f32, // 0.0 - 1.0
+    velocity: u8,
 ) {
     let real_max = (channel.max_duty_cycle() as f32 / 8.3) as u16; // ~2.4ms
     let real_min = (channel.max_duty_cycle() as f32 / 45.0) as u16; // ~0.444ms
 
+    // convert to range of 0 - 1
+    let speed = velocity as f32 / u8::MAX as f32;
+
     // must be bigger than start and end
-    let range_start = (start) as i16;
-    let range_end = (end) as i16;
     let step = if end > start { 1 } else { -1 };
 
     // cant use for with rev
-    let mut i = range_start;
+    let mut i = start as i16;
     loop {
         // break if we are at the end
-        if step == 1 && i >= range_end {
+        if step == 1 && i >= end as i16 {
             break;
-        } else if step == -1 && i <= range_end {
+        } else if step == -1 && i <= end as i16 {
             break;
         }
 
@@ -162,8 +163,6 @@ fn main() -> ! {
 
     let mut amplitude = 0;
     let mut velocity = 0;
-    let mut position = 0;
-    let mut direction = 0;
 
     // Create a USB device with a fake VID and PID
     let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x05ac, 0x1261))
@@ -231,8 +230,8 @@ fn main() -> ! {
 
     loop {
         // todo switching to u16 will make less conversions, and bouncing easier
-        move_servo(channel, &mut delay, 0, u8::MAX, 1.0);
-        move_servo(channel, &mut delay, u8::MAX, 0, 1.0);
+        move_servo(channel, &mut delay, 0, u8::MAX, velocity);
+        move_servo(channel, &mut delay, u8::MAX, 0, velocity);
     }
 
     // loop {
