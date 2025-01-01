@@ -38,12 +38,6 @@ use usbd_serial::SerialPort;
 use core::{fmt::Write, pin};
 use heapless::String;
 
-// The minimum PWM value (i.e. LED brightness) we want
-const LOW: u16 = 0;
-
-// The maximum PWM value (i.e. LED brightness) we want
-const HIGH: u16 = 25000;
-
 /// Custom USB class for our device
 pub struct VendorUSB<'a, B: UsbBus> {
     interface: InterfaceNumber,
@@ -87,15 +81,16 @@ fn move_servo(
         hal::pwm::A,
     >,
     delay: &mut cortex_m::delay::Delay,
-    start: f32,
-    end: f32,
-    speed: f32,
+    start: u8,
+    end: u8,
+    speed: f32, // 0.0 - 1.0
 ) {
     let real_max = (channel.max_duty_cycle() as f32 / 8.3) as u16; // ~2.4ms
     let real_min = (channel.max_duty_cycle() as f32 / 45.0) as u16; // ~0.444ms
 
-    let range_start = (180.0 * start) as i16;
-    let range_end = (180.0 * end) as i16;
+    // must be bigger than start and end
+    let range_start = (start) as i16;
+    let range_end = (end) as i16;
     let step = if end > start { 1 } else { -1 };
 
     // cant use for with rev
@@ -109,10 +104,11 @@ fn move_servo(
         }
 
         // convert i to a duty cycle
-        let duty = (real_max - real_min) as f32 * i as f32 / 180.0 + real_min as f32;
+        let duty = (real_max - real_min) as f32 * i as f32 / u8::MAX as f32 + real_min as f32;
 
+        // cant do u16 because it would be too slow
         channel.set_duty_cycle(duty as u16).unwrap();
-        delay.delay_ms((5.0 / speed) as u32);
+        delay.delay_ms((2.5 / speed) as u32);
 
         i += step;
     }
@@ -216,7 +212,7 @@ fn main() -> ! {
     // so it was jumping around because it was trying to use the whole duty cycle
     // its actually 0.5-2.5ms
     // TODO make this more readable, maybe decimals or something
-    let real_max = (max as f32 / 8.3) as u16; // ~2.4ms
+    let _real_max = (max as f32 / 8.3) as u16; // ~2.4ms
     let real_min = (max as f32 / 45f32) as u16; // ~0.444ms
 
     let mut pin_led = pins.led.into_push_pull_output();
@@ -235,8 +231,8 @@ fn main() -> ! {
 
     loop {
         // todo switching to u16 will make less conversions, and bouncing easier
-        move_servo(channel, &mut delay, 0.0, 1.0, 1.0);
-        move_servo(channel, &mut delay, 1.0, 0.0, 1.0);
+        move_servo(channel, &mut delay, 0, u8::MAX, 1.0);
+        move_servo(channel, &mut delay, u8::MAX, 0, 1.0);
     }
 
     // loop {
