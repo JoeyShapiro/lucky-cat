@@ -31,13 +31,6 @@ use rp_pico::hal;
 // USB Device support
 use usb_device::{class_prelude::*, prelude::*};
 
-// USB Communications Class Device support
-use usbd_serial::SerialPort;
-
-// Used to demonstrate writing formatted strings
-use core::{fmt::Write, pin};
-use heapless::String;
-
 /// Custom USB class for our device
 pub struct VendorUSB<'a, B: UsbBus> {
     interface: InterfaceNumber,
@@ -147,8 +140,6 @@ fn main() -> ! {
 
     let core = pac::CorePeripherals::take().unwrap();
 
-    let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
-
     // Set up the USB driver
     let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
         pac.USBCTRL_REGS,
@@ -204,15 +195,6 @@ fn main() -> ! {
     let channel = &mut pwm.channel_a;
     // channel.output_to(pins.led);
     channel.output_to(pins.gpio0);
-    let max = channel.max_duty_cycle();
-    // find better way
-    // finally got it. servo doesnt use whole duty cycle, just a portion
-    // so max is 20ms, but we only use 1-2ms
-    // so it was jumping around because it was trying to use the whole duty cycle
-    // its actually 0.5-2.5ms
-    // TODO make this more readable, maybe decimals or something
-    let _real_max = (max as f32 / 8.3) as u16; // ~2.4ms
-    let real_min = (max as f32 / 45f32) as u16; // ~0.444ms
 
     let mut pin_led = pins.led.into_push_pull_output();
 
@@ -223,10 +205,6 @@ fn main() -> ! {
         pin_led.set_low().unwrap();
         delay.delay_ms(100);
     }
-
-    // reset
-    channel.set_duty_cycle(real_min).unwrap();
-    delay.delay_ms(1000);
 
     loop {
         move_servo(
@@ -261,6 +239,10 @@ fn main() -> ! {
 
                     // first byte is amp, then velocity
                     amplitude = buf[0] as u8;
+
+                    // safety check to remove the last one
+                    amplitude &= 0x7F;
+
                     velocity = buf[1] as u8;
 
                     pin_led.set_high().unwrap();
