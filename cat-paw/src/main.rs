@@ -1,14 +1,3 @@
-//! # Pico USB Serial Example
-//!
-//! Creates a USB Serial device on a Pico board, with the USB driver running in
-//! the main thread.
-//!
-//! This will create a USB Serial device echoing anything it receives. Incoming
-//! ASCII characters are converted to upercase, so you can tell it is working
-//! and not just local-echo!
-//!
-//! See the `Cargo.toml` file for Copyright and license details.
-
 #![no_std]
 #![no_main]
 
@@ -30,6 +19,10 @@ use rp_pico::hal;
 
 // USB Device support
 use usb_device::{class_prelude::*, prelude::*};
+
+const VID_APPLE: u16 = 0x05ac;
+const PID_IPOD_CLASSIC: u16 = 0x1261;
+const U8_HALF: u8 = 0x7f;
 
 /// Custom USB class for our device
 pub struct VendorUSB<'a, B: UsbBus> {
@@ -108,13 +101,6 @@ fn move_servo(
     }
 }
 
-/// Entry point to our bare-metal application.
-///
-/// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
-/// as soon as all global variables are initialised.
-///
-/// The function configures the RP2040 peripherals, then echoes any characters
-/// received over USB Serial.
 #[entry]
 fn main() -> ! {
     // Grab our singleton objects
@@ -156,7 +142,7 @@ fn main() -> ! {
     let mut velocity = 0;
 
     // Create a USB device with a fake VID and PID
-    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x05ac, 0x1261))
+    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(VID_APPLE, PID_IPOD_CLASSIC))
         .strings(&[StringDescriptors::default()
             .manufacturer("Apple")
             .product("Cat Paw")
@@ -210,15 +196,15 @@ fn main() -> ! {
         move_servo(
             channel,
             &mut delay,
-            127 - amplitude,
-            127 + amplitude,
+            U8_HALF - amplitude,
+            U8_HALF + amplitude,
             velocity,
         );
         move_servo(
             channel,
             &mut delay,
-            127 + amplitude,
-            127 - amplitude,
+            U8_HALF + amplitude,
+            U8_HALF - amplitude,
             velocity,
         );
 
