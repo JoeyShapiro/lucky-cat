@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+mod vendor_usb;
+
 use embedded_hal::{digital::OutputPin, pwm::SetDutyCycle};
 // The macro for our start-up function
 use rp_pico::{entry, hal::Clock};
@@ -23,43 +25,6 @@ use usb_device::{class_prelude::*, prelude::*};
 const VID_APPLE: u16 = 0x05ac;
 const PID_IPOD_CLASSIC: u16 = 0x1261;
 const U8_HALF: u8 = 0x7f;
-
-/// Custom USB class for our device
-pub struct VendorUSB<'a, B: UsbBus> {
-    interface: InterfaceNumber,
-    in_ep: EndpointIn<'a, B>,
-    out_ep: EndpointOut<'a, B>,
-}
-
-impl<B: UsbBus> VendorUSB<'_, B> {
-    /// Creates a new VendorUSB
-    pub fn new(alloc: &UsbBusAllocator<B>) -> VendorUSB<'_, B> {
-        VendorUSB {
-            interface: alloc.interface(),
-            in_ep: alloc.bulk(64),  // EP1 IN
-            out_ep: alloc.bulk(64), // EP2 OUT
-        }
-    }
-
-    /// Write data to host
-    pub fn write(&mut self, data: &[u8]) -> Result<usize, UsbError> {
-        self.in_ep.write(data)
-    }
-
-    /// Read data from host
-    pub fn read(&mut self, data: &mut [u8]) -> Result<usize, UsbError> {
-        self.out_ep.read(data)
-    }
-}
-
-impl<B: UsbBus> UsbClass<B> for VendorUSB<'_, B> {
-    fn get_configuration_descriptors(&self, writer: &mut DescriptorWriter) -> Result<(), UsbError> {
-        writer.interface(self.interface, 0xFF, 0x00, 0x00)?;
-        writer.endpoint(&self.in_ep)?;
-        writer.endpoint(&self.out_ep)?;
-        Ok(())
-    }
-}
 
 fn move_servo(
     channel: &mut hal::pwm::Channel<
@@ -136,7 +101,7 @@ fn main() -> ! {
     ));
 
     // Set up the USB Communications Class Device driver
-    let mut serial = VendorUSB::new(&usb_bus);
+    let mut serial = vendor_usb::VendorUSB::new(&usb_bus);
 
     let mut amplitude = 0; // cant be greater than 127
     let mut velocity = 0;
@@ -194,6 +159,7 @@ fn main() -> ! {
 
     loop {
         // TODO if this is slower, it will delay the usb read AND write
+        // TODO check cpu usage, make sure it is fine and doesnt do dumb polling stuff
         move_servo(
             channel,
             &mut delay,
