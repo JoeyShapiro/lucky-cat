@@ -161,7 +161,7 @@ fn main() -> ! {
     // Set up the USB Communications Class Device driver
     let mut serial = VendorUSB::new(&usb_bus);
 
-    let mut amplitude = 0;
+    let mut amplitude = 0; // cant be greater than 127
     let mut velocity = 0;
 
     // Create a USB device with a fake VID and PID
@@ -229,8 +229,20 @@ fn main() -> ! {
     delay.delay_ms(1000);
 
     loop {
-        move_servo(channel, &mut delay, 0, u8::MAX, velocity);
-        move_servo(channel, &mut delay, u8::MAX, 0, velocity);
+        move_servo(
+            channel,
+            &mut delay,
+            127 - amplitude,
+            127 + amplitude,
+            velocity,
+        );
+        move_servo(
+            channel,
+            &mut delay,
+            127 + amplitude,
+            127 - amplitude,
+            velocity,
+        );
 
         // Check for new data
         if usb_dev.poll(&mut [&mut serial]) {
