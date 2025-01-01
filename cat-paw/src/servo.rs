@@ -18,6 +18,7 @@ pub struct Servo<'a> {
     step: i16,
     pos: i16,
     last: u32,
+    norm_factor: f32,
 }
 
 impl<'a> Servo<'a> {
@@ -43,6 +44,9 @@ impl<'a> Servo<'a> {
             step: 1,
             pos: 0,
             last: 0,
+            // norm = (max - min) * pos / u8::MAX + min
+            // norm = min + (max - min) / u8::MAX * pos
+            norm_factor: (real_max - real_min) as f32 / u8::MAX as f32, // compute once to save resources
         }
     }
 
@@ -80,15 +84,17 @@ impl<'a> Servo<'a> {
         self.last = 0;
 
         // check if we should change directions
-        if self.step == 1 && self.pos >= self.end as i16 {
-            self.step = -1;
-        } else if self.step == -1 && self.pos <= self.start as i16 {
-            self.step = 1;
-        }
+        // TODO is this more efficient
+        self.step = if self.pos >= self.end as i16 {
+            -1
+        } else if self.pos <= self.start as i16 {
+            1
+        } else {
+            self.step
+        };
 
-        // convert i to a duty cycle
-        let duty = (self.real_max - self.real_min) as f32 * self.pos as f32 / u8::MAX as f32
-            + self.real_min as f32;
+        // convert pos to a duty cycle
+        let duty = self.norm_factor * self.pos as f32 + self.real_min as f32;
 
         // cant do u16 because it would be too slow
         self.channel.set_duty_cycle(duty as u16).unwrap();
