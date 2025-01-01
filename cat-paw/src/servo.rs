@@ -53,6 +53,7 @@ impl<'a> Servo<'a> {
     // could do move to and a bunch of steps to get to it, but i can just go to it now
     // i can break it apart later, but i dont need functions i wont use
     // pub fn move_to(&mut self, delay: &mut cortex_m::delay::Delay, to: u8, vel: u8)
+    // i dont even think these would be as efficient, esp for what im doing
 
     // convert to range of 0 - 1
     pub fn set_speed(&mut self, velocity: u8) {
@@ -84,14 +85,11 @@ impl<'a> Servo<'a> {
         self.last = 0;
 
         // check if we should change directions
-        // TODO is this more efficient
-        self.step = if self.pos >= self.end as i16 {
-            -1
+        if self.pos >= self.end as i16 {
+            self.step = -1;
         } else if self.pos <= self.start as i16 {
-            1
-        } else {
-            self.step
-        };
+            self.step = 1;
+        }
 
         // convert pos to a duty cycle
         let duty = self.norm_factor * self.pos as f32 + self.real_min as f32;

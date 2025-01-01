@@ -63,9 +63,6 @@ fn main() -> ! {
     // Set up the USB Communications Class Device driver
     let mut serial = vendor_usb::VendorUSB::new(&usb_bus);
 
-    let mut amplitude = 0; // cant be greater than 127
-    let mut velocity = 0;
-
     // Create a USB device with a fake VID and PID
     let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(VID_APPLE, PID_IPOD_CLASSIC))
         .strings(&[StringDescriptors::default()
@@ -120,6 +117,7 @@ fn main() -> ! {
     }
 
     loop {
+        // could put clock here and pass in delta, but would be waste of cycles for this
         paw.update(&mut delay);
 
         // Check for new data
@@ -137,19 +135,18 @@ fn main() -> ! {
                         continue; // ignore anything that isn't 2 bytes
                     }
 
-                    // first byte is amp, then velocity
-                    amplitude = buf[0] as u8;
+                    // 0: amplitude
+                    // 1: velocity
 
                     // safety check to remove the last one
-                    amplitude &= 0x7F;
-                    paw.set_amp(amplitude);
+                    buf[0] &= 0x7F;
+                    paw.set_amp(buf[0] as u8);
 
-                    velocity = buf[1] as u8;
-                    paw.set_speed(velocity);
+                    paw.set_speed(buf[1] as u8);
 
-                    // pin_led.set_high().unwrap();
-                    // delay.delay_ms(1);
-                    // pin_led.set_low().unwrap();
+                    pin_led.set_high().unwrap();
+                    delay.delay_ms(1);
+                    pin_led.set_low().unwrap();
 
                     // send back 0x01 if we got the right data
                     let _ = serial.write(&[0x01]);
