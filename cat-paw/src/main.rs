@@ -229,49 +229,36 @@ fn main() -> ! {
     delay.delay_ms(1000);
 
     loop {
-        // todo switching to u16 will make less conversions, and bouncing easier
         move_servo(channel, &mut delay, 0, u8::MAX, velocity);
         move_servo(channel, &mut delay, u8::MAX, 0, velocity);
+
+        // Check for new data
+        if usb_dev.poll(&mut [&mut serial]) {
+            let mut buf = [0u8; 64];
+            match serial.read(&mut buf) {
+                Err(_e) => {
+                    // Do nothing
+                }
+                Ok(0) => {
+                    // Do nothing
+                }
+                Ok(count) => {
+                    if count != 2 {
+                        continue; // ignore anything that isn't 2 bytes
+                    }
+
+                    // first byte is amp, then velocity
+                    amplitude = buf[0] as u8;
+                    velocity = buf[1] as u8;
+
+                    pin_led.set_high().unwrap();
+                    delay.delay_ms(1);
+                    pin_led.set_low().unwrap();
+
+                    // send back 0x01 if we got the right data
+                    let _ = serial.write(&[0x01]);
+                }
+            }
+        }
     }
-
-    // loop {
-    //     // Check for new data
-    //     if usb_dev.poll(&mut [&mut serial]) {
-    //         let mut buf = [0u8; 64];
-    //         match serial.read(&mut buf) {
-    //             Err(_e) => {
-    //                 // Do nothing
-    //             }
-    //             Ok(0) => {
-    //                 // Do nothing
-    //             }
-    //             Ok(count) => {
-    //                 if count != 2 {
-    //                     continue; // ignore anything that isn't 2 bytes
-    //                 }
-
-    //                 // first byte is amp, then velocity
-    //                 amplitude = buf[0] as u8;
-    //                 velocity = buf[1] as u8;
-
-    //                 pin_led.set_high().unwrap();
-    //                 delay.delay_ms(1);
-    //                 pin_led.set_low().unwrap();
-
-    //                 // send back 0x01 if we got the right data
-    //                 let _ = serial.write(&[0x01]);
-    //             }
-    //         }
-    //     }
-
-    //     if position >= amplitude {
-    //         direction = -1;
-    //         pin_in2.set_low().unwrap();
-    //         pin_in1.set_high().unwrap();
-    //     } else if position <= -amplitude {
-    //         direction = 1;
-    //         pin_in1.set_low().unwrap();
-    //         pin_in2.set_high().unwrap();
-    //     }
-    // }
 }
