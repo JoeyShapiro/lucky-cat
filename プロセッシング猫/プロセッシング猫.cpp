@@ -23,7 +23,6 @@ in this case it will be used to determine how far it should move from the origin
 #define u8 unsigned char
 #define u8_max sizeof(u8) * 255
 
-
 int main()
 {
     std::cout << "Hello World!\n";

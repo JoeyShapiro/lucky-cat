@@ -129,7 +129,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="driver.cpp" />
+    <ClCompile Include="not-driver.cpp" />
     <ClCompile Include="usb.cpp" />
     <ClCompile Include="プロセッシング猫.cpp" />
   </ItemGroup>
