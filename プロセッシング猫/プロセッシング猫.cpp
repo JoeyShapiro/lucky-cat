@@ -25,9 +25,6 @@ in this case it will be used to determine how far it should move from the origin
 
 int main()
 {
-    std::cout << "Hello World!\n";
-    printf("max: %d\n", u8_max);
-
     // Get list of all USB devices
     auto devices = USBDevice::ListDevices();
 
@@ -40,17 +37,24 @@ int main()
         std::cout << "------------------------" << std::endl;
     }
 
+    USBDevice device;
+    if (device.Connect(0x00, 0x00)) {
+        printf("connected");
+    }
+
     PDH_HQUERY query;
     PDH_HCOUNTER cpucounter;
-    PDH_HCOUNTER memcounter;
     PdhOpenQuery(NULL, NULL, &query);
 
     // this is similar to that mac thing where it asks the script thing for data
     PdhAddEnglishCounterA(query, "\\Processor Information(_Total)\\% Processor Utility", NULL, &cpucounter);
-    PdhAddEnglishCounterA(query, "\\Memory\\% Committed Bytes in Use", NULL, &memcounter); // "\\Memory\\Available Bytes"
     PdhCollectQueryData(query);
 
     PDH_FMT_COUNTERVALUE val;
+
+    void* data = malloc(2);
+    void* buf = malloc(1);
+    DWORD n = 0;
 
     while (1) {
         PdhCollectQueryData(query);
@@ -69,6 +73,9 @@ int main()
         // normalize to byte range
         u8 norm = mem * u8_max;
         printf("mem: %d\n", norm);
+
+        device.SendData(data, 2);
+        device.ReceiveData(buf, 1, &n);
 
         Sleep(1000);
     }
