@@ -52,6 +52,11 @@ func main() {
 		log.Fatalf("Could not get OUT endpoint: %v", err)
 	}
 
+	fmt.Printf("Sending amplitude: %d, velocity: %d\n", 255, 255)
+
+	sendWithAck(outEndpoint, inEndpoint, []byte{255, 255})
+	time.Sleep(20 * time.Second)
+
 	for {
 		amp := byte(rand.Intn(255))
 		vel := byte(rand.Intn(255))
