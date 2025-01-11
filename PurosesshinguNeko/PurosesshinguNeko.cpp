@@ -4,6 +4,7 @@
 #include "framework.h"
 #include "PurosesshinguNeko.h"
 #include "shellapi.h"
+#include <stdio.h>
 
 #define MAX_LOADSTRING 100
 #define WM_TRAYICON (WM_USER + 1)
@@ -18,11 +19,14 @@ NOTIFYICONDATA nid = {};
 HWND hWnd;
 HMENU hPopMenu;
 BOOL state = true;
+DWORD interval = 5000;
+BOOL connected = false;
 
 // Forward declarations of functions included in this code module:
 BOOL                RegisterInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+DWORD   WINAPI      Update(LPVOID);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -33,6 +37,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: Place code here.
+    CreateThread(NULL, 0, Update, NULL, 0, NULL);
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -89,6 +94,30 @@ BOOL RegisterInstance(HINSTANCE hInstance, int nCmdShow)
     return hWnd ? TRUE : FALSE;
 }
 
+INT_PTR CALLBACK SettingsDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+    case WM_INITDIALOG:
+        SetDlgItemInt(hDlg, IDC_INTERVAL, interval, FALSE);
+        return TRUE;
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDOK:
+            interval = GetDlgItemInt(hDlg, IDC_INTERVAL, NULL, FALSE);
+            EndDialog(hDlg, IDOK);
+            return TRUE;
+        case IDCANCEL:
+            EndDialog(hDlg, IDCANCEL);
+            return TRUE;
+        }
+        break;
+    }
+    return FALSE;
+}
+
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -139,6 +168,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
             // Parse the menu selections:
             switch (wmId)
             {
+            case IDM_SETTINGS:
+                DialogBox(hInst, MAKEINTRESOURCE(IDD_SETTINGS), hwnd, SettingsDialogProc);
+                return 0;
             case IDM_STATE:
                 state = !state;
                 break;
@@ -157,5 +189,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     default:
         return DefWindowProc(hwnd, message, wParam, lParam);
     }
+    return 0;
+}
+
+DWORD WINAPI Update(LPVOID param) {
+    while (true) {
+        Sleep(interval);
+        if (!connected) continue;
+
+
+    }
+
     return 0;
 }

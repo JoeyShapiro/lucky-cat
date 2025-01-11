@@ -7,7 +7,7 @@
 #define IDR_MAINFRAME			128
 
 #define IDD_PUROSESSHINGUNEKO_DIALOG	102
-#define IDD_ABOUTBOX			103
+#define IDD_SETTINGS			103
 
 #define IDM_ABOUT				104
 #define IDM_EXIT				105
@@ -17,6 +17,7 @@
 #define IDI_SMALL				109
 
 #define IDC_PUROSESSHINGUNEKO	110
+#define IDC_INTERVAL			111
 #define IDC_MYICON				2
 #ifndef IDC_STATIC
 #define IDC_STATIC				-1
