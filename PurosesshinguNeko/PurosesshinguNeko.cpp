@@ -4,11 +4,21 @@
 #include "framework.h"
 #include "PurosesshinguNeko.h"
 #include "shellapi.h"
-#include <stdio.h>
+#include <pdh.h>
+
+#pragma comment(lib, "pdh.lib")
 
 #define MAX_LOADSTRING 100
 #define WM_TRAYICON (WM_USER + 1)
 #define ID_TRAYICON 1
+
+/*
+I send over the percentage of usage to the device normalized to its range of 1 byte
+it will convert that to whatever it needs
+in this case it will be used to determine how far it should move from the origin
+*/
+#define u8 unsigned char
+#define u8_max sizeof(u8) * 255
 
 // Global Variables:                              // current instance
 HINSTANCE hInst;
@@ -18,7 +28,7 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 NOTIFYICONDATA nid = {};
 HWND hWnd;
 HMENU hPopMenu;
-BOOL state = true;
+BOOL running = true;
 DWORD interval = 5000;
 BOOL connected = false;
 
@@ -27,6 +37,7 @@ BOOL                RegisterInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 DWORD   WINAPI      Update(LPVOID);
+void                GetUsage(PDH_HQUERY, PDH_HCOUNTER, PDH_FMT_COUNTERVALUE*, float* );
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -153,7 +164,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
             GetCursorPos(&pt);
             hPopMenu = CreatePopupMenu();
             InsertMenu(hPopMenu, 0, MF_BYPOSITION | MF_STRING, IDM_SETTINGS, L"Settings");
-            InsertMenu(hPopMenu, 1, MF_BYPOSITION | MF_STRING, IDM_STATE, state ? L"Pause" : L"Resume");
+            InsertMenu(hPopMenu, 1, MF_BYPOSITION | MF_STRING, IDM_STATE, running ? L"Pause" : L"Resume");
             InsertMenu(hPopMenu, 2, MF_BYPOSITION | MF_STRING, IDM_EXIT, L"Exit");
             SetForegroundWindow(hwnd);
             TrackPopupMenu(hPopMenu, TPM_RIGHTALIGN | TPM_BOTTOMALIGN,
@@ -172,7 +183,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_SETTINGS), hwnd, SettingsDialogProc);
                 return 0;
             case IDM_STATE:
-                state = !state;
+                running = !running;
                 break;
             case IDM_EXIT:
                 DestroyWindow(hwnd);
@@ -193,12 +204,43 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 DWORD WINAPI Update(LPVOID param) {
+    PDH_HQUERY query;
+    PDH_HCOUNTER cpuCounter;
+    PDH_FMT_COUNTERVALUE val;
+    float memory;
+    PdhOpenQuery(NULL, NULL, &query);
+
+    // this is similar to that mac thing where it asks the script thing for data
+    PdhAddEnglishCounterA(query, "\\Processor Information(_Total)\\% Processor Utility", NULL, &cpuCounter);
+    PdhCollectQueryData(query);
+
+    void* data = malloc(2);
+    void* buf = malloc(1);
+    DWORD n = 0;
+
     while (true) {
         Sleep(interval);
-        if (!connected) continue;
+        if (!connected || !running) continue;
 
+        GetUsage(query, cpuCounter, &val, &memory);
 
+        u8 norm = memory * u8_max;
+        u8 cpu = val.doubleValue * u8_max;
     }
 
     return 0;
+}
+
+void GetUsage(PDH_HQUERY query, PDH_HCOUNTER cpuCounter, PDH_FMT_COUNTERVALUE *val, float *memory) {
+    PdhCollectQueryData(query);
+    PdhGetFormattedCounterValue(cpuCounter, PDH_FMT_DOUBLE, NULL, val);
+
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memInfo);
+
+    DWORDLONG totalPhysMem = memInfo.ullTotalPhys;
+    DWORDLONG physMemUsed = totalPhysMem - memInfo.ullAvailPhys;
+
+    *memory = (float)physMemUsed / totalPhysMem;
 }
