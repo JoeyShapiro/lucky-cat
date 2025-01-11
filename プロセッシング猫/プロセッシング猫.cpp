@@ -22,24 +22,14 @@ in this case it will be used to determine how far it should move from the origin
 */
 #define u8 unsigned char
 #define u8_max sizeof(u8) * 255
+#define VID_APPLE 0x05ac
+#define PID_IPOD_CLASSIC 0x1261
 
 int main()
 {
-    // Get list of all USB devices
-    auto devices = USBDevice::ListDevices();
-
-    // Print information about each device
-    for (const auto& device : devices) {
-        std::cout << "Description: " << device.description << std::endl;
-        std::cout << "Vendor ID: 0x" << std::hex << device.vendorId << std::endl;
-        std::cout << "Product ID: 0x" << std::hex << device.productId << std::endl;
-        std::cout << "Hardware ID: " << device.hardwareId << std::endl;
-        std::cout << "------------------------" << std::endl;
-    }
-
     USBDevice device;
-    if (device.Connect(0x00, 0x00)) {
-        printf("connected");
+    if (!device.Connect(VID_APPLE, PID_IPOD_CLASSIC)) {
+        device = nullptr;
     }
 
     PDH_HQUERY query;
@@ -56,7 +46,7 @@ int main()
     void* buf = malloc(1);
     DWORD n = 0;
 
-    while (1) {
+    while (device) {
         PdhCollectQueryData(query);
         PdhGetFormattedCounterValue(cpucounter, PDH_FMT_DOUBLE, NULL, &val);
         std::cout << "cpu: " << val.doubleValue << "%" << std::endl;
@@ -70,9 +60,9 @@ int main()
 
         float mem = (float)physMemUsed / totalPhysMem;
 
-        // normalize to byte range
-        u8 norm = mem * u8_max;
-        printf("mem: %d\n", norm);
+        // normalize to byte range and send data to device
+        ((u8*)data)[0] = val.doubleValue * u8_max;
+        ((u8*)data)[1] = mem * u8_max;
 
         device.SendData(data, 2);
         device.ReceiveData(buf, 1, &n);
