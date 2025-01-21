@@ -27,9 +27,15 @@
     <ClInclude Include="PurosesshinguNeko.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="usb.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PurosesshinguNeko.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="usb.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
