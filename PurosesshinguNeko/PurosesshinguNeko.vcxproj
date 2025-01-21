@@ -137,10 +137,12 @@
     <ClInclude Include="PurosesshinguNeko.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="usage.h" />
     <ClInclude Include="usb.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PurosesshinguNeko.cpp" />
+    <ClCompile Include="usage.cpp" />
     <ClCompile Include="usb.cpp" />
   </ItemGroup>
   <ItemGroup>
