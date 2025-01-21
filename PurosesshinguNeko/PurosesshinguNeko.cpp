@@ -1,5 +1,13 @@
-// PurosesshinguNeko.cpp : Defines the entry point for the application.
+﻿// PurosesshinguNeko.cpp : Defines the entry point for the application.
 //
+
+/*
+プロ (puro) = "pro"
+セッ (ses) = "ces"
+シン (shin) = "s-in"
+グ (gu) = "g"
+猫 (neko) = "cat"
+*/
 
 #include "framework.h"
 #include "PurosesshinguNeko.h"
@@ -206,8 +214,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 DWORD WINAPI Update(LPVOID param) {
     Usage usage = Usage();
-    void* data = malloc(2);
-    void* buf = malloc(1);
+    u8 data[2]{};
+    u8 buf[1]{};
     DWORD n = 0;
 
     while (true) {
