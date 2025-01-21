@@ -5,6 +5,7 @@
 #include "PurosesshinguNeko.h"
 #include "shellapi.h"
 #include <pdh.h>
+#include "usb.h"
 
 #pragma comment(lib, "pdh.lib")
 
@@ -19,18 +20,20 @@ in this case it will be used to determine how far it should move from the origin
 */
 #define u8 unsigned char
 #define u8_max sizeof(u8) * 255
+#define VID 0x05ac
+#define PID 0x1261
 
 // Global Variables:                              // current instance
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+USBDevice device;
 
 NOTIFYICONDATA nid = {};
 HWND hWnd;
 HMENU hPopMenu;
 BOOL running = true;
 DWORD interval = 5000;
-BOOL connected = false;
 
 // Forward declarations of functions included in this code module:
 BOOL                RegisterInstance(HINSTANCE, int);
@@ -48,6 +51,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: Place code here.
+    device.Connect(VID, PID);
     CreateThread(NULL, 0, Update, NULL, 0, NULL);
 
     // Initialize global strings
@@ -220,12 +224,20 @@ DWORD WINAPI Update(LPVOID param) {
 
     while (true) {
         Sleep(interval);
-        if (!connected || !running) continue;
+        // try to connect if not connected
+        if (!device.Connected()) {
+            device.Connect(VID, PID);
+        }
+        // if it failed, then we skip
+        if (!device.Connected() || !running) continue;
 
         GetUsage(query, cpuCounter, &val, &memory);
 
-        u8 norm = memory * u8_max;
-        u8 cpu = val.doubleValue * u8_max;
+        ((u8*)data)[0] = val.doubleValue * u8_max;
+        ((u8*)data)[1] = memory * u8_max;
+
+        device.SendData(data, 2);
+        device.ReceiveData(buf, 1, &n);
     }
 
     return 0;

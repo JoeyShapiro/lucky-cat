@@ -76,6 +76,10 @@ std::vector<USBDeviceInfo> USBDevice::ListDevices() {
 	return deviceList;
 }
 
+bool USBDevice::Connected() const {
+	return this->connected;
+}
+
 bool USBDevice::Connect(USHORT vendorId, USHORT productId) {
 	// Get device information set for all USB devices
 	HDEVINFO deviceInfo = SetupDiGetClassDevs(nullptr, L"USB", nullptr,
@@ -135,7 +139,8 @@ bool USBDevice::Connect(USHORT vendorId, USHORT productId) {
 
 						free(detailData);
 						SetupDiDestroyDeviceInfoList(deviceInfo);
-						return deviceHandle != INVALID_HANDLE_VALUE;
+						this->connected = deviceHandle != INVALID_HANDLE_VALUE;
+						return this->connected;
 					}
 					free(detailData);
 				}
