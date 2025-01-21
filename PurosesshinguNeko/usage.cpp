@@ -1,5 +1,4 @@
 #include "usage.h"
-#include <Pdh.h>
 
 #pragma comment(lib, "pdh.lib")
 

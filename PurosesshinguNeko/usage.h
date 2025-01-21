@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Pdh.h>
+
 class Usage {
 private:
     float cpu;

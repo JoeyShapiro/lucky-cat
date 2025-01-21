@@ -11,6 +11,7 @@
 
 #include "usb.h"
 
+#pragma comment(lib, "SetupAPI.lib")
 
 std::vector<USBDeviceInfo> USBDevice::ListDevices() {
 	std::vector<USBDeviceInfo> deviceList;  // Changed from 'devices'
@@ -103,6 +104,20 @@ bool USBDevice::Connect(USHORT vendorId, USHORT productId) {
 			SPDRP_HARDWAREID, &regType, (PBYTE)buffer, bufferSize, nullptr)) {
 
 			std::string hardwareId = buffer;
+
+			// convert utf16 to utf8
+			for (size_t j = 0; j < bufferSize; j+=2)
+			{
+				if (buffer[j]) {
+					hardwareId += buffer[j];
+				}
+				else {
+					break;
+				}
+
+			}
+			hardwareId += '\0';
+
 			// Check if this is our device (you'll need to modify this check)
 			if (hardwareId.find("VID_" + std::to_string(vendorId)) != std::string::npos &&
 				hardwareId.find("PID_" + std::to_string(productId)) != std::string::npos) {
