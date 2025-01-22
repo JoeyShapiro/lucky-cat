@@ -22,9 +22,11 @@ use rp_pico::hal;
 
 // USB Device support
 use usb_device::{class_prelude::*, prelude::*};
+// const VID_APPLE: u16 = 0x05ac;
+// const PID_IPOD_CLASSIC: u16 = 0x1261;
 
-const VID_APPLE: u16 = 0x05ac;
-const PID_IPOD_CLASSIC: u16 = 0x1261;
+const VID_APPLE: u16 = 0x2e8A; // Raspberry Pi Foundation
+const PID_IPOD_CLASSIC: u16 = 0x000a; // development
 
 #[entry]
 fn main() -> ! {
