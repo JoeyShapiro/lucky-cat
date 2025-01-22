@@ -26,8 +26,8 @@ in this case it will be used to determine how far it should move from the origin
 */
 #define u8 unsigned char
 #define u8_max sizeof(u8) * 255
-#define VID 0x05ac
-#define PID 0x1261
+#define VID 0x2E8A
+#define PID 0x000A
 
 // Global Variables:                              // current instance
 HINSTANCE hInst;

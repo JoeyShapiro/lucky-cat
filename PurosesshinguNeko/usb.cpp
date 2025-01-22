@@ -8,6 +8,7 @@
 #include <chrono>
 #include <thread>
 #include <iomanip>
+#include <sstream>      // for stringstream
 
 #include "usb.h"
 
@@ -81,6 +82,33 @@ bool USBDevice::Connected() const {
 	return this->connected;
 }
 
+static std::string id_to_hex(USHORT id) {
+	// Without the 0x prefix and padding
+	std::stringstream ss{};
+
+	// If you need to pad with zeros to a specific width:
+	ss << std::setfill('0') << std::setw(4) << std::uppercase << std::hex << id;
+
+	return ss.str();
+}
+
+static std::string GetLastErrorAsString() {
+	DWORD error = GetLastError();
+	char buffer[256];
+
+	FormatMessageA(
+		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		nullptr,
+		error,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		buffer,
+		sizeof(buffer),
+		nullptr
+	);
+
+	return std::string(buffer);
+}
+
 bool USBDevice::Connect(USHORT vendorId, USHORT productId) {
 	// Get device information set for all USB devices
 	HDEVINFO deviceInfo = SetupDiGetClassDevs(nullptr, L"USB", nullptr,
@@ -93,10 +121,13 @@ bool USBDevice::Connect(USHORT vendorId, USHORT productId) {
 	SP_DEVINFO_DATA deviceInfoData;
 	deviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
 
+	auto vid = id_to_hex(vendorId);
+	auto pid = id_to_hex(productId);
+
 	// Enumerate through all devices
 	for (DWORD i = 0; SetupDiEnumDeviceInfo(deviceInfo, i, &deviceInfoData); i++) {
 		DWORD regType;
-		CHAR buffer[256];
+		CHAR buffer[256]{};
 		DWORD bufferSize = sizeof(buffer);
 
 		// Get device path
@@ -119,15 +150,25 @@ bool USBDevice::Connect(USHORT vendorId, USHORT productId) {
 			hardwareId += '\0';
 
 			// Check if this is our device (you'll need to modify this check)
-			if (hardwareId.find("VID_" + std::to_string(vendorId)) != std::string::npos &&
-				hardwareId.find("PID_" + std::to_string(productId)) != std::string::npos) {
+			if (hardwareId.find("VID_" + vid) != std::string::npos &&
+				hardwareId.find("PID_" + pid) != std::string::npos) {
+
+				GUID guid{};
+
+				// Get GUID
+				if (SetupDiGetDeviceRegistryProperty(deviceInfo, &deviceInfoData,
+					SPDRP_CLASSGUID, &regType, (PBYTE)buffer, bufferSize, nullptr)) {
+					// guidString now contains the GUID in string format
+					// If you need it as a GUID structure:
+					CLSIDFromString((LPWSTR)buffer, (LPCLSID)&guid);
+				}
 
 				// Get device path for CreateFile
 				SP_DEVICE_INTERFACE_DATA interfaceData;
 				interfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 
 				if (SetupDiCreateDeviceInterface(deviceInfo, &deviceInfoData,
-					nullptr, nullptr, 0, &interfaceData)) {
+					&guid, nullptr, 0, &interfaceData)) {
 
 					// Get required buffer size
 					DWORD requiredSize;
@@ -152,12 +193,18 @@ bool USBDevice::Connect(USHORT vendorId, USHORT productId) {
 							FILE_FLAG_OVERLAPPED,
 							nullptr);
 
+						std::string e = GetLastErrorAsString();
+
 						free(detailData);
 						SetupDiDestroyDeviceInfoList(deviceInfo);
 						this->connected = deviceHandle != INVALID_HANDLE_VALUE;
 						return this->connected;
 					}
 					free(detailData);
+				}
+				else {
+					std::string e = GetLastErrorAsString();
+					printf("here");
 				}
 			}
 		}
