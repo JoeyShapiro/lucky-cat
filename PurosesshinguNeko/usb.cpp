@@ -9,10 +9,15 @@
 #include <thread>
 #include <iomanip>
 #include <sstream>      // for stringstream
+#include <WinUSB.h>
 
 #include "usb.h"
 
 #pragma comment(lib, "SetupAPI.lib")
+#pragma comment(lib, "WinUSB.lib")
+
+#define BULK_IN_ENDPOINT 0x81 // EP1 IN (0x80 | 1)
+#define BULK_OUT_ENDPOINT 0x01 // EP2 OUT (0x2)
 
 std::vector<USBDeviceInfo> USBDevice::ListDevices() {
 	std::vector<USBDeviceInfo> deviceList;  // Changed from 'devices'
@@ -192,12 +197,20 @@ bool USBDevice::Connect(USHORT vendorId, USHORT productId) {
 							FILE_SHARE_READ | FILE_SHARE_WRITE,
 							nullptr,
 							OPEN_EXISTING,
-							FILE_FLAG_OVERLAPPED, // FILE_ATTRIBUTE_NORMAL
+							FILE_FLAG_OVERLAPPED | FILE_ATTRIBUTE_NORMAL,
 							nullptr);
+
+						if (deviceHandle != INVALID_HANDLE_VALUE) {
+							if (!WinUsb_Initialize(deviceHandle, &winUsbHandle)) {
+								CloseHandle(deviceHandle);
+								deviceHandle = INVALID_HANDLE_VALUE;
+							}
+						}
 
 						free(detailData);
 						SetupDiDestroyDeviceInfoList(deviceInfo);
 						this->connected = deviceHandle != INVALID_HANDLE_VALUE;
+
 						return this->connected;
 					}
 					free(detailData);
@@ -214,6 +227,7 @@ bool USBDevice::Connect(USHORT vendorId, USHORT productId) {
 	return false;
 }
 
+/*
 bool USBDevice::SendData(const void* data, DWORD dataSize) {
 	if (deviceHandle == INVALID_HANDLE_VALUE) {
 		return false;
@@ -223,17 +237,45 @@ bool USBDevice::SendData(const void* data, DWORD dataSize) {
 	overlapped.hEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
 	DWORD bytesWritten;
-	bool success = WriteFile(deviceHandle, data, dataSize, &bytesWritten, &overlapped);
+	bool success = WriteFile(deviceHandle, data, dataSize, &bytesWritten, nullptr);
 
 	if (!success && GetLastError() == ERROR_IO_PENDING) {
 		// Wait for operation to complete
 		success = GetOverlappedResult(deviceHandle, &overlapped, &bytesWritten, TRUE);
+		printf("hello");
 	}
 
 	CloseHandle(overlapped.hEvent);
 	return success && (bytesWritten == dataSize);
 }
+*/
 
+bool USBDevice::SendData(const void* data, DWORD dataSize) {
+	if (deviceHandle == INVALID_HANDLE_VALUE || !this->winUsbHandle) {
+		return false;
+	}
+
+	// Query and print pipe information to verify endpoints
+	USB_INTERFACE_DESCRIPTOR interfaceDescriptor;
+	if (WinUsb_QueryInterfaceSettings(winUsbHandle, 0, &interfaceDescriptor)) {
+		for (UCHAR i = 0; i < interfaceDescriptor.bNumEndpoints; i++) {
+			WINUSB_PIPE_INFORMATION pipeInfo;
+			if (WinUsb_QueryPipe(winUsbHandle, 0, i, &pipeInfo)) {
+				printf("Endpoint 0x%02X: Type=%d, Direction=%s\n",
+					pipeInfo.PipeId,
+					pipeInfo.PipeType,
+					(pipeInfo.PipeId & 0x80) ? "IN" : "OUT");
+			}
+		}
+	}
+
+	ULONG bytesWritten;
+	bool success = WinUsb_WritePipe(winUsbHandle, BULK_OUT_ENDPOINT, (PUCHAR)data, dataSize, &bytesWritten, nullptr);
+
+	return success && (bytesWritten == dataSize);
+}
+
+/*
 bool USBDevice::ReceiveData(void* buffer, DWORD bufferSize, DWORD* bytesRead) {
 	if (deviceHandle == INVALID_HANDLE_VALUE) {
 		return false;
@@ -251,4 +293,18 @@ bool USBDevice::ReceiveData(void* buffer, DWORD bufferSize, DWORD* bytesRead) {
 
 	CloseHandle(overlapped.hEvent);
 	return success;
+}
+*/
+
+bool USBDevice::ReceiveData(void* buffer, DWORD bufferSize, DWORD* bytesRead) {
+	if (deviceHandle == INVALID_HANDLE_VALUE || !winUsbHandle) {
+		return false;
+	}
+
+	return WinUsb_ReadPipe(winUsbHandle,
+		BULK_IN_ENDPOINT,  // EP1 IN
+		(PUCHAR)buffer,
+		bufferSize,
+		bytesRead,
+		nullptr);
 }

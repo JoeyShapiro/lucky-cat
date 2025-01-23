@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <WinUsb.h>
 
 struct USBDeviceInfo {
     std::string hardwareId;
@@ -14,12 +15,18 @@ class USBDevice {
 private:
     HANDLE deviceHandle;
     bool connected;
+    WINUSB_INTERFACE_HANDLE winUsbHandle;
 
 public:
     USBDevice() : deviceHandle(INVALID_HANDLE_VALUE) {
         this->connected = false;
+        this->winUsbHandle = nullptr;
     }
     ~USBDevice() {
+        if (winUsbHandle) {
+            WinUsb_Free(winUsbHandle);
+        }
+
         if (deviceHandle != INVALID_HANDLE_VALUE) {
             CloseHandle(deviceHandle);
         }
