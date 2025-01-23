@@ -153,20 +153,22 @@ bool USBDevice::Connect(USHORT vendorId, USHORT productId) {
 			if (hardwareId.find("VID_" + vid) != std::string::npos &&
 				hardwareId.find("PID_" + pid) != std::string::npos) {
 
-				GUID guid{};
+				//GUID guid{};
 
-				// Get GUID
-				if (SetupDiGetDeviceRegistryProperty(deviceInfo, &deviceInfoData,
-					SPDRP_CLASSGUID, &regType, (PBYTE)buffer, bufferSize, nullptr)) {
-					// guidString now contains the GUID in string format
-					// If you need it as a GUID structure:
-					CLSIDFromString((LPWSTR)buffer, (LPCLSID)&guid);
-				}
+				//// Get GUID
+				//if (SetupDiGetDeviceRegistryProperty(deviceInfo, &deviceInfoData,
+				//	SPDRP_CLASSGUID, &regType, (PBYTE)buffer, bufferSize, nullptr)) {
+				//	// guidString now contains the GUID in string format
+				//	// If you need it as a GUID structure:
+				//	CLSIDFromString((LPWSTR)buffer, (LPCLSID)&guid);
+				//}
+				GUID guid = { 0xA5DCBF10, 0x6530, 0x11D2, {0x90, 0x1F, 0x00, 0xC0, 0x4F, 0xB9, 0x51, 0xED} };
+				// or define it as: static const GUID GUID_DEVINTERFACE_USB_DEVICE
 
 				// Get device path for CreateFile
 				SP_DEVICE_INTERFACE_DATA interfaceData;
 				interfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
-
+				
 				if (SetupDiCreateDeviceInterface(deviceInfo, &deviceInfoData,
 					&guid, nullptr, 0, &interfaceData)) {
 
@@ -190,10 +192,8 @@ bool USBDevice::Connect(USHORT vendorId, USHORT productId) {
 							FILE_SHARE_READ | FILE_SHARE_WRITE,
 							nullptr,
 							OPEN_EXISTING,
-							FILE_FLAG_OVERLAPPED,
+							FILE_FLAG_OVERLAPPED, // FILE_ATTRIBUTE_NORMAL
 							nullptr);
-
-						std::string e = GetLastErrorAsString();
 
 						free(detailData);
 						SetupDiDestroyDeviceInfoList(deviceInfo);

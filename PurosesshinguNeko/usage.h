@@ -6,7 +6,7 @@ class Usage {
 private:
     float cpu;
     float memory;
-    PDH_HQUERY *query;
+    PDH_HQUERY query;
     PDH_HCOUNTER cpuCounter;
 
 public:
