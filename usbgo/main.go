@@ -16,7 +16,7 @@ func main() {
 
 	// Open device by vendor and product IDs
 	// Replace these with your device's IDs
-	vid, pid := gousb.ID(0x05ac), gousb.ID(0x1261)
+	vid, pid := gousb.ID(0x2e8A), gousb.ID(0x000a)
 
 	dev, err := ctx.OpenDeviceWithVIDPID(vid, pid)
 	if err != nil {
@@ -52,13 +52,20 @@ func main() {
 		log.Fatalf("Could not get OUT endpoint: %v", err)
 	}
 
-	fmt.Printf("Sending amplitude: %d, velocity: %d\n", 255, 255)
+	fmt.Printf("Sending amplitude: %d, velocity: %d\n", 127, 255)
+	sendWithAck(outEndpoint, inEndpoint, []byte{127, 255})
+	time.Sleep(10 * time.Second)
 
-	sendWithAck(outEndpoint, inEndpoint, []byte{255, 255})
-	time.Sleep(20 * time.Second)
+	fmt.Printf("Sending amplitude: %d, velocity: %d\n", 127, 127)
+	sendWithAck(outEndpoint, inEndpoint, []byte{127, 127})
+	time.Sleep(10 * time.Second)
+
+	fmt.Printf("Sending amplitude: %d, velocity: %d\n", 32, 127)
+	sendWithAck(outEndpoint, inEndpoint, []byte{32, 127})
+	time.Sleep(10 * time.Second)
 
 	for {
-		amp := byte(rand.Intn(255))
+		amp := byte(rand.Intn(127))
 		vel := byte(rand.Intn(255))
 		fmt.Printf("Sending amplitude: %d, velocity: %d\n", amp, vel)
 

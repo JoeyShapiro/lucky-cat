@@ -228,8 +228,8 @@ DWORD WINAPI Update(LPVOID param) {
         if (!device.Connected() || !running) continue;
 
         if (usage.Measure()) {
-            ((u8*)data)[0] = usage.CPU() * u8_max;
-            ((u8*)data)[1] = usage.Mem() * u8_max;
+            ((u8*)data)[0] = usage.Mem() * 127;
+            ((u8*)data)[1] = usage.CPU() * u8_max;
         }
 
         device.SendData(data, 2);
