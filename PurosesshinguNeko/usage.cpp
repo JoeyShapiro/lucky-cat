@@ -9,7 +9,8 @@ Usage::Usage() {
     PdhOpenQuery(NULL, NULL, &this->query);
 
     // this is similar to that mac thing where it asks the script thing for data
-    PdhAddEnglishCounterA(this->query, "\\Processor Information(_Total)\\% Processor Utility", NULL, &this->cpuCounter);
+    // processor Utility goes over 100%
+    PdhAddEnglishCounterA(this->query, "\\Processor Information(_Total)\\% Processor Time", NULL, &this->cpuCounter);
     PdhCollectQueryData(this->query);
 
     PDH_FMT_COUNTERVALUE val;
